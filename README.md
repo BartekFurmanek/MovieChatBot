@@ -3,24 +3,24 @@ This project is a **movie chatbot** powered by **LLMs (HuggingFace)** and a **Ne
 The app enables interactive conversations about movies using data from [CMU Personas Dataset](https://www.cs.cmu.edu/~ark/personas/).  
 
 ##  Project Structure
-├── .env # environment variables
-├── requirements.txt # required libraries
-├── install.ps1 # script for creating Python environment and installing dependencies
-├── start_app.ps1 # script to run the app
+- .env # environment variables
+- requirements.txt # required libraries
+- install.ps1 # script for creating Python environment and installing dependencies
+- start_app.ps1 # script to run the app
 │
-├── data
-│ ├── raw/ # raw data (downloaded from CMU site)
-│ └── clean/ # processed data ready for Neo4j
+- data
+│ - raw/ # raw data (downloaded from CMU site)
+│ - clean/ # processed data ready for Neo4j
 │
-├── notebooks
-│ └── data_prep/ # notebooks for data preprocessing
+-  notebooks
+│ - data_prep/ # notebooks for data preprocessing
 │
-└── src
-├── prompts.yaml # LLM prompt templates
-├── chatbot.py # chatbot logic
-├── neo4jdb.py # Neo4j database class
-├── db.py # database initialization script
-└── app.py # main chatbot application
+- src
+│ - prompts.yaml # LLM prompt templates
+│ - chatbot.py # chatbot logic
+│ - neo4jdb.py # Neo4j database class
+│ - db.py # database initialization script
+│ - app.py # main chatbot application
 
 ## Requirements
 - **Python 3.10+**
@@ -93,5 +93,6 @@ The chosen model must support **conversational mode**, i.e., recognize and corre
 
 This chatbot was developed and tested with:  
 **`mistralai/Mistral-Small-3.1-24B-Instruct-2503`**.  
+
 
 If you use a different model, additional **prompt engineering** in `prompts.yaml` may be required to achieve correct results.
