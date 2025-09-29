@@ -1,0 +1,140 @@
+cypher_schema: |
+    Nodes:
+    (Movie, properties: {id, title, original_title, overview, release_date, budget, popularity, revenue, runtime, vote_average, vote_count, overview_embedding, movie_info, movie_info_embedding})
+    (Actor, properties: {name, person_id})
+    (Director, properties: {name , person_id})
+    (Crew, properties: {name, person_id})
+    (Person, properties: {name, person_id})
+    (Genre, properties: {name, genre_id})
+    (Keyword, properties: {name, keyword_id})
+    (Collection, properties: {name, collection_id})
+    (ProductionCompany, properties: {name, company_id})
+    (ProductionCountry, properties: {name, country_code})
+    (SpokenLanguages, properties: {name, language_code})
+    Relationships:
+    (Actor|Person)-[ACTED_IN, properties: {character}]->(Movie)
+    (Director|Person)-[DIRECTED]->(Movie)
+    (Crew|Person)-[WORKED_AS, properties: {department, job}]->(Movie)
+    (Keyword)-[HAS_KEYWORD]->(Movie)
+    (Genre)-[OF_GENRE]->(Movie)
+    (Collection)-[PART_OF_COLLECTION]->(Movie)
+    (ProductionCompany)-[PRODUCED_BY]->(Movie)
+    (ProductionCountry)-[PRODUCED_IN]->(Movie)
+    (SpokenLanguage)-[SPOKEN_IN]->(Movie)
+
+cypher_examples: |
+    1.  Question: What is budget of movie movie_title?
+        Cypher: MATCH(m:Movie {title: 'movie_title'}) WHERE m.budget IS NOT NULL RETURN m.title AS Title, m.budget AS Budget
+    2.  Question: Who were the actors in the movie movie_name?
+        Cypher: MATCH(m:Movie {title: 'movie_name'})<-[r:ACTED_IN]-(a:Actor) RETURN m.title AS MovieTitle
+    3.  Question: Which film starring actor_name has the highest rating?
+        Cypher: MATCH(m:Movie)<-[r:ACTED_IN]-(a:Actor {name: 'actor_name'}) WHERE m.vote_avarage IS NOT NULL RETURN m.vote_average AS Rating, m.title AS MovieTitle ORDER BY Rating DESCENDING LIMIT 5
+    4.  Question: When movie movie_name came out?
+        Cypher: MATCH(m:Movie {title: 'movie_name'}) RETURN m.title AS MovieTitle, m.release_date AS ReleaseDate
+    5.  Question: What is the longest movie produced in country_name?
+        Cypher: MATCH(m:Movie)<-[PRODUCED_IN]-(ProductionCountry {name: 'country_name'}) WHERE m.runtime IS NOT NULL RETURN m.runtime AS Runtime, m.title AS MovieTitle ORDER BY Runtime DESCENDING LIMIT 5
+    6.  Question: What is the newest movie with actor actor_name
+        Cypher: MATCH(m:Movie)<-[r:ACTED_IN]-(a:Actor {name: 'actor_name'}) WHERE m.release_date IS NOT NULL AND r.character IS NOT NULL RETURN m.release_date AS MovieReleaseDate, m.title AS MovieTitle ORDER BY MovieReleaseDate DESC LIMIT 5
+    7.  Question: Could you find for me movies with character_name character? What is the series of this movie?
+        Cypher: MATCH(m:Movie)<-[r:ACTED_IN {character: 'character_name'}]-(a:Actor) RETURN m.movie_info AS MovieInfo
+    8.  Question: Find movie simmilar to movie_title
+        Cypher: MATCH (m:Movie {title: 'movie_title'})-[HAS_KEYWORD]-(k:Keyword) WITH COLLECT(k.name) AS MovieKeywordsBase MATCH (m:Movie)-[HAS_KEYWORD]-(k:Keyword) WHERE k.name IN MovieKeywordsBase RETURN m.title AS MovieTitle, COLLECT(k.name) AS Keywords ORDER BY SIZE(Keywords) DESC LIMIT 5
+        Question: Find highest rated movies in genre of genre_type with vote count grater than 100
+        Cypher: MATCH(g:Genre {name: 'genre_type'})-[OF_GENRE]-(m:Movie) WHERE m.vote_average IS NOT NULL AND m.vote_count > 100 RETURN m.vote_average AS Rating, m.title AS MovieTitle ORDER BY Rating DESC LIMIT 5
+    """
+
+cypher_prompt: |
+    Task: Generate a Cypher statement to query a graph database.
+    Instructions:
+    Use only the provided relationship types and properties in the schema.
+    Do not use any other relationship types or properties that are not provided.
+    List of cypher quries that did not work correctly can be found below. Never use this queries again.
+    All string properties values are lower cased.
+    Always try to use WHERE node.property IS NOT NULL to exclude nodes with missing values in the used properties.
+    Always check if property with choosen value exists.
+    Always return only properties values needed to answer the question, do not return properties values not related to asked question.
+    Do not use new line character in cypher query, use space instead.
+    When sorting results cypher syntax is ORDER BY node.property or ORDER BY alias
+    When returning values cypher syntax is RETURN node.property AS alias, ... , node.property AS alias then optional ORDER BY or LIMIT
+    Informations about movie's actors, directors, crew, keywords, genres, collections, production countries and companies or spoken languages can be found
+    in movie_info property of movie_node, so there is no need to return any neighbour nodes or relationships.
+    First try to get as much context as can without using movie_info property. Return movie_info only when needed.
+    Do not user <- or -> in MATCH, always use ()-[]-() to find the path.
+
+    Here is the list of previous cypher queries that you generated for this question that did not worked correctly:
+    {previous_queries}
+
+    Already used queries to generate data (try to avoid using them again)
+    {used_quries}
+
+    Important:
+    Sometimes errors and typos may occur when searching for properties with certain values. 
+    If you want to generate a query to find nodes with certain property values ​​and such a query is already in the list of previous broken queries, 
+    it may mean that there is an error or typo in the string value. Then use the apoc.text.distance command function.
+    If asked about nodes with property of specific string value, first try to find nodes with MATCH(n:Node) WHERE property_name == lowered string value, 
+    if query with that syntax is already listed in previous queries with information about no data returned, then try to find nodes using contains function MATCH(n:Node) 
+    WHERE n.property_name CONTAINS (lowered_string), if this query did not return any value, then finally apoc.text.distance can be used.
+    Only use apoc.text.distance once at single query. Never use apoc.text.distance multiple times in one statement.
+    Example of use for question: Find information about movie Hunger Games.
+    Previous not working query: MATCH (m:Movie) WHERE m.title == 'Hunger Games' RETURN m.movie_info AS MovieInfo
+    Cypher: MATCH (m:Movie) WITH m, apoc.text.distance(m.title, 'Hunger Games') AS distance RETURN m.movie_info AS MovieInfo ORDER BY distance ASC LIMIT 10
+    Another example: Find movies with actress Oliwia Colman.
+    Previous not working query: MATCH(m:Movie)-[ACTED_IN]-(a:Actor) WHERE a.name == 'Oliwia Colman' AND m.title IS NOT NULL return m.title AS MovieTitle
+    Cypher: MATCH (a:Actor) WITH a, apoc.text.distance(a.name, 'Oliwia Colman') AS Distance MATCH (m:Movie)-[ACTED_IN]-(a) RETURN a.name AS ActorName, m.title AS MovieTitle ORDER BY Distance ASC LIMIT 50
+    In case of using apoc.text.distnace results always must be ordered by distance ascending and limited
+    
+    You are allowed to generate multiple cypher queries with answer template ["query1", "query2",...].
+    Even if only one query is generated it must be in template ["query"].
+    Do not generate multiple variations of the same query.
+    Generate multiple queries only when finding nodes with different property values is needed. For example:
+    Question: What are ratings of movies: movie_title1, movie_title2, movie_title3
+    CYPHER: ["MATCH (m:Movie) WHERE m.vote_avarage IS NOT NULL WITH m, apoc.text.distance(m.title, 'movie_title1') AS distance RETURN m.title AS MovieTitle, m.vote_avarage AS Rating ORDER BY distance ASC LIMIT 10", "MATCH (m:Movie) WHERE m.vote_avarage IS NOT NULL WITH m, apoc.text.distance(m.title, 'movie_title2') AS distance RETURN m.title AS MovieTitle, m.vote_avarage AS Rating ORDER BY distance ASC LIMIT 10", "MATCH (m:Movie) WHERE m.vote_avarage IS NOT NULL WITH m, apoc.text.distance(m.title, 'movie_title3') AS distance RETURN m.title AS MovieTitle, m.vote_avarage AS Rating ORDER BY distance ASC LIMIT 10"]
+
+
+    Schema:
+    {cypher_schema}
+    Examples:
+    {cypher_examples}
+    
+
+    Note: Do not include any explanations or apologies in your responses.
+    Do not respond to any questions that might ask anything else than for you to construct a Cypher statement.
+    MOST IMPORTANT: Do not include any text except the generated Cypher statement.
+    Generate only cypher query with out any additional text.
+
+    The question is: {question}
+
+base: |
+    Use prevoius chat history with context and additional following context to anserw the the question at the end.
+    If provided context is not enough to anserw generate anserw strictly with this template "NO_CONTEXT "your prompt for retrivial system".
+    Always try to use chat history with context and additional contex, use NO_CONTEXT only if you don't have data.
+    Examples of prompt for retrival system: "In wnich movies Tom Hanks Played", "What actors played in Toy Story".
+    Do not generate too complicated prompts for retrivial system. 
+    You loop to obtain all the context you need and will be called repeatedly until the context provided allows you to answer the question.
+    If you don't know the answer, try to find the appropriate data. 
+    Ultimately, if you are unable to answer a question despite providing a lot of information, say that you simply don't know, don't make up any data
+    Do not generate thinking proccess. Simply anserw given question or generate retrivial question with template "NO_CONTEXT "your prompt for retrivial system".
+    
+    Example of generating prompts for retrivial system:
+    User: What are five highest rated movies? What are their genres?
+    You: NO_CONTEXT "find five highest rated"
+    System: ["Movie1", "Movie2", "Movie3", "Movie4", "Movie5"]
+    You: NO_CONTEXT "Find genres of movies Movie1, Movie2, Movie3, Movie4, Movie5
+    System: ["Movie1 genres..." , "Movie2 genres...", "Movie3 genres...", "Movie4 genres...", "Movie5 genres..."]
+    You: Final answer based on collected data.
+    Another example:
+    User: Find for me actors that played in comedy movies with the biggest budget.
+    You: NO_CONTEXT "Find movies in genre of comedy with the biggest budget.
+    System: ["Movie1", "Movie2", "Movie3"]
+    You: NO_CONTEXT "Find actors that played in Movie1, Movie2 and Movie3."
+    System: ["Movie1 actors..." , "Movie2 actors...", "Movie3 actors..."]
+    You: Final answer based on collected data.
+
+    Previous chat: {chat_history}
+
+    Context: {context}
+
+    Question: {question}
+
+
+    Answer:
