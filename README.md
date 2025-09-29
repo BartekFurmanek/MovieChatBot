@@ -8,16 +8,16 @@ The app enables interactive conversations about movies using data from [CMU Pers
 - install.ps1 # script for creating Python environment and installing dependencies
 - start_app.ps1 # script to run the app
 - data
--- raw/ # raw data (downloaded from CMU site)
--- clean/ # processed data ready for Neo4j
+  - raw/ # raw data (downloaded from CMU site)
+  - clean/ # processed data ready for Neo4j
 -  notebooks
--- data_prep/ # notebooks for data preprocessing
+  - data_prep/ # notebooks for data preprocessing
 - src
--- prompts.yaml # LLM prompt templates
--- chatbot.py # chatbot logic
--- neo4jdb.py # Neo4j database class
--- db.py # database initialization script
--- app.py # main chatbot application
+  - prompts.yaml # LLM prompt templates
+  - chatbot.py # chatbot logic
+  - neo4jdb.py # Neo4j database class
+  - db.py # database initialization script
+  - app.py # main chatbot application
 
 ## Requirements
 - **Python 3.10+**
@@ -93,4 +93,5 @@ This chatbot was developed and tested with:
 
 
 If you use a different model, additional **prompt engineering** in `prompts.yaml` may be required to achieve correct results.
+
 
